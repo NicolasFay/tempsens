@@ -1,3 +1,4 @@
 matplotlib
 smbus2
 python-dotenv
+pyyaml
