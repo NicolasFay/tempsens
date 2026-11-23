@@ -5,7 +5,7 @@ from gpiozero import LED
 
 from config import load_settings
 from monitor import AlertState
-from notifer import EmailNotifier
+from notifier import EmailNotifier
 from sensor import TMP102
 from graph import make_graph_png
 
@@ -17,7 +17,7 @@ def main():
     state = AlertState(s.temp_threshold_f, s.alert_cooldown)
     notifier = EmailNotifier(s.smtp_email, s.smtp_password,
                              s.receiver_email, s.temp_threshold_f)
-    records = deque(maxlen=s.record_length)
+    records = deque(maxlen=s.records_kept)
 
     while True:
         try:
