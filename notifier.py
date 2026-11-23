@@ -69,5 +69,5 @@ class EmailNotifier:
             logger.info("Alert email sent!")
             return True
         except Exception as e:
-            logger.exception(f"Failed to send email: {e}")
+            logger.exception("Failed to send email: %s", e)
             return False
