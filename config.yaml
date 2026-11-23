@@ -1,0 +1,3 @@
+temp_threshold_f: 70.0      # Degrees Farenheit
+check_interval: 60          # seconds
+alert_cooldown: 3600        # seconds
