@@ -4,22 +4,85 @@ import mimetypes
 import os
 import time
 import io
+import yaml
+import sys
 from email.message import EmailMessage
 from email.utils import make_msgid
 from gpiozero import LED
 from matplotlib.figure import Figure
 from dotenv import load_dotenv
+from pathlib import Path
+
+# --- Configuration Functions ---
+DEFAULT_CONFIG = {
+    "temp_threshold_f": 70.0, 
+    "check_interval": 60,         
+    "alert_cooldown": 3600        
+}
+
+def load_config(filepath="config.yaml"):
+    try:
+        with open(filepath, "r") as file:
+            # Returns None if the file is completely empty
+            data = yaml.safe_load(file)
+            if data is None:
+                print(f"Warning: {filepath} is empty. Using default settings.")
+                return DEFAULT_CONFIG
+            return data
+
+    except FileNotFoundError:
+        print(f"Error: {filepath} not found. Using default settings.")
+        return DEFAULT_CONFIG
+
+    except yaml.YAMLError as e:
+        print(f"Error: Invalid YAML syntax in {filepath}.")
+        # Optional: print the exact line and column of the syntax error
+        if hasattr(e, 'problem_mark'):
+            mark = e.problem_mark
+            print(f"Syntax error at line {mark.line + 1}, column {mark.column + 1}")
+        sys.exit(1)  # Stop execution if the config is broken
+
+def load_environment(env_path=".env", required_vars=None):
+    if required_vars is None:
+        required_vars = ["SMTP_EMAIL", "SMTP_PASSWORD", "RECEIVER_EMAIL"]
+
+    env_file = Path(env_path)
+
+    # 1. Check if the .env file actually exists (since load_dotenv won't raise an error)
+    if not env_file.is_file():
+        print(f"Warning: {env_path} file not found. Checking system environment variables...")
+    else:
+        try:
+            # override=True ensures .env values update any stale system variables
+            loaded = load_dotenv(dotenv_path=env_file, override=True)
+            if not loaded:
+                print(f"Warning: {env_path} is empty or contains no valid variables.")
+        except PermissionError:
+            print(f"Error: Permission denied when trying to read {env_path}.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Unexpected error loading {env_path}: {e}")
+            sys.exit(1)
+
+    # 2. Verify that all required variables exist and are not empty strings
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        print(f"Error: Missing required environment variables: {', '.join(missing_vars)}")
+        print("Ensure they are set in your .env file or system environment.")
+        sys.exit(1)
 
 # --- CONFIGURATION ---
-load_dotenv()
+load_environment(required_vars=["SMTP_EMAIL", "SMTP_PASSWORD", "RECEIVER_EMAIL"])
+config = load_config("config.yaml")
 
-SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-APP_PASSWORD = os.getenv("APP_PASSWORD")
+SMTP_EMAIL = os.getenv("SMTP_EMAIL")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
 
-TEMP_THRESHOLD_F = 70.0       # Alert if temp drops below this (Farenheit)
-CHECK_INTERVAL = 60            # Check every 60 seconds
-ALERT_COOLDOWN = 3600          # Wait 1 hour (3600s) before sending another alert
+TEMP_THRESHOLD_F = config["temp_threshold_f"]        # Alert if temp drops below this (Farenheit)
+CHECK_INTERVAL = config["check_interval"]            # Check every 60 seconds
+ALERT_COOLDOWN = config["alert_cooldown"]            # Wait 1 hour (3600s) before sending another alert
 
 IMAGE_PATH = "/home/njfay/Desktop/Temp/images/hi.png"
 
@@ -108,7 +171,7 @@ def send_email_img(current_temp, sender, receiver, graph_bytes=None, image_path=
 
     try:
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(sender, APP_PASSWORD)
+            smtp.login(sender, SMTP_PASSWORD)
             smtp.send_message(msg)
         print("Alert email sent!")
         return True
@@ -152,7 +215,7 @@ while True:
                 print(f"Graph error: {e}")
                 graph = None  # still send the alert without the graph
 
-            if send_email_img(temp, SENDER_EMAIL, RECEIVER_EMAIL, graph_bytes=graph, image_path=IMAGE_PATH):
+            if send_email_img(temp, SMTP_EMAIL, RECEIVER_EMAIL, graph_bytes=graph, image_path=IMAGE_PATH):
                 last_alert_time = current_time
                 low_temp_counter = 0
             
