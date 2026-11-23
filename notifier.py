@@ -1,8 +1,11 @@
 import mimetypes
 import smtplib
 import os
+import logging
 from email.message import EmailMessage
 from email.utils import make_msgid
+
+logger = logging.getLogger(__name__)
 
 class EmailNotifier:
     def __init__(self, sender, password, receiver, threshold_f):
@@ -63,8 +66,8 @@ class EmailNotifier:
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                 smtp.login(self.sender, self.password)
                 smtp.send_message(msg)
-            print("Alert email sent!")
+            logger.info("Alert email sent!")
             return True
         except Exception as e:
-            print(f"Failed to send email: {e}")
+            logger.exception(f"Failed to send email: {e}")
             return False
