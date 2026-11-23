@@ -9,6 +9,7 @@ from monitor import AlertState
 from notifier import EmailNotifier
 from sensor import TMP102
 from graph import make_graph_png
+from telegram_bot import TelegramBot
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,6 +26,13 @@ def main():
                              s.receiver_email, s.temp_threshold_f)
     records = deque(maxlen=s.records_kept)
 
+    bot = TelegramBot(
+        s.telegram_token,
+        s.telegram_chat_id,
+        get_latest_temp=lambda: records[-1] if records else None,
+    )
+    bot.start()
+    
     while True:
         try:
             temp = sensor.read_f()

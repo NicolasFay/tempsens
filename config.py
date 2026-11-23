@@ -2,9 +2,9 @@ import yaml
 import sys
 import os
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from dotenv import load_dotenv\
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,8 @@ class Settings:
     alert_cooldown: int
     records_kept: int
     image_path: Path
+    telegram_token: str = field(repr=False)
+    telegram_chat_id: int
 
 def load_settings() -> Settings:
     load_environment(BASE_DIR / ".env")
@@ -40,6 +42,8 @@ def load_settings() -> Settings:
         alert_cooldown=int(cfg["alert_cooldown"]),
         records_kept=int(cfg["records_kept"]),
         image_path=BASE_DIR / "images" / "hi.png",
+        telegram_token=os.environ["TELEGRAM_TOKEN"],
+        telegram_chat_id=int(os.environ["TELEGRAM_CHAT_ID"]),
     )
 
 def load_config(filepath="config.yaml"):
@@ -66,7 +70,7 @@ def load_config(filepath="config.yaml"):
 
 def load_environment(env_path=".env", required_vars=None):
     if required_vars is None:
-        required_vars = ["SMTP_EMAIL", "SMTP_PASSWORD", "RECEIVER_EMAIL"]
+        required_vars = ["SMTP_EMAIL", "SMTP_PASSWORD", "RECEIVER_EMAIL", "TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID"]
 
     env_file = Path(env_path)
 
