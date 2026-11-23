@@ -1,4 +1,5 @@
 import time
+import logging
 from collections import deque
 
 from gpiozero import LED
@@ -9,8 +10,13 @@ from notifier import EmailNotifier
 from sensor import TMP102
 from graph import make_graph_png
 
-# --- CONFIGURATION ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s: %(message)s",
+)
+
 def main():
+    logger = logging.getLogger(__name__) 
     s = load_settings()
     led = LED(17)
     sensor = TMP102()
@@ -23,7 +29,7 @@ def main():
         try:
             temp = sensor.read_f()
             records.append(temp)
-            print(f"Current Temp: {temp:.2f}°F")
+            logger.info("Current Temp: %.2f°F", temp)
 
             should_alert = state.update(temp, time.time())
             led.value = state.below_thresh
@@ -33,13 +39,13 @@ def main():
                     graph = make_graph_png(list(records), s.temp_threshold_f,
                                             s.check_interval)
                 except Exception as e:
-                    print(f"Graph error: {e}")
+                    logger.error("Graph Error: %s", e)
                     graph = None
 
                 if notifier.send_low_temp(temp, graph, s.image_path):
                     state.mark_sent(time.time())
         except Exception as e:
-            print(f"Loop error: {e}")
+            logger.error("Loop Error: %s", e)
 
         time.sleep(s.check_interval)
 
