@@ -11,7 +11,7 @@ class EmailNotifier:
         self.receiver = receiver
         self.threshold_f = threshold_f
 
-    def send_email_img(self, temp_f, graph_bytes=None, image_path=None):
+    def send_low_temp(self, temp_f, graph_bytes=None, image_path=None):
         msg = EmailMessage()
         msg['Subject'] = f"Low Temp Alert: {temp_f:.1f}°F"
         msg['From'] = self.sender
