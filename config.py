@@ -1,9 +1,12 @@
 import yaml
 import sys
 import os
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from dotenv import load_dotenv\
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -45,20 +48,20 @@ def load_config(filepath="config.yaml"):
             # Returns None if the file is completely empty
             data = yaml.safe_load(file)
             if data is None:
-                print(f"Warning: {filepath} is empty. Using default settings.")
+                logger.warning(f"{filepath} is empty. Using default settings.")
                 return DEFAULT_CONFIG
             return data
 
     except FileNotFoundError:
-        print(f"Error: {filepath} not found. Using default settings.")
+        logger.error(f"{filepath} not found. Using default settings.")
         return DEFAULT_CONFIG
 
     except yaml.YAMLError as e:
-        print(f"Error: Invalid YAML syntax in {filepath}.")
+        logger.exception(f"YAMLError: Invalid YAML syntax in {filepath}.")
         # Optional: print the exact line and column of the syntax error
         if hasattr(e, 'problem_mark'):
             mark = e.problem_mark
-            print(f"Syntax error at line {mark.line + 1}, column {mark.column + 1}")
+            logger.error(f"Syntax error at line {mark.line + 1}, column {mark.column + 1}")
         sys.exit(1)  # Stop execution if the config is broken
 
 def load_environment(env_path=".env", required_vars=None):
@@ -69,24 +72,24 @@ def load_environment(env_path=".env", required_vars=None):
 
     # 1. Check if the .env file actually exists (since load_dotenv won't raise an error)
     if not env_file.is_file():
-        print(f"Warning: {env_path} file not found. Checking system environment variables...")
+        logger.warning(f"{env_path} file not found. Checking system environment variables...")
     else:
         try:
             # override=True ensures .env values update any stale system variables
             loaded = load_dotenv(dotenv_path=env_file, override=True)
             if not loaded:
-                print(f"Warning: {env_path} is empty or contains no valid variables.")
+                logger.warning(f"{env_path} is empty or contains no valid variables.")
         except PermissionError:
-            print(f"Error: Permission denied when trying to read {env_path}.")
+            logger.exception(f"PermissionError: Permission denied when trying to read {env_path}.")
             sys.exit(1)
         except Exception as e:
-            print(f"Unexpected error loading {env_path}: {e}")
+            logger.exception(f"Unexpected error loading {env_path}: {e}")
             sys.exit(1)
 
     # 2. Verify that all required variables exist and are not empty strings
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
     if missing_vars:
-        print(f"Error: Missing required environment variables: {', '.join(missing_vars)}")
-        print("Ensure they are set in your .env file or system environment.")
+        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+        logger.info("Ensure they are set in your .env file or system environment.")
         sys.exit(1)
